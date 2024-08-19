@@ -1,8 +1,4 @@
 import streamlit as st
-from flask import Flask
-from keep_alive import keep_alive
-keep_alive()
-from threading import Thread
 from highrise import BaseBot, User, Position, AnchorPosition
 from highrise.__main__ import *
 import highrise, random, asyncio, json
