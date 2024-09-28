@@ -1,134 +1,180 @@
-import os
-import importlib.util
-from typing import Optional
+import random
+from highrise import BaseBot, Position
+from highrise.models import User, SessionMetadata
 
-class MGBot:
-    def __init__(self, highrise, room_id: str):
-        self.highrise = highrise
-        self.room_id = room_id
+class HighriseBot(BaseBot):
+    def __init__(self):
+        super().__init__()
+        self.moderators = []  # List of moderator usernames
+        self.host = None  # Set the host username
 
-    async def teleport_user_next_to(self, target_username: str, requester_user: User) -> None:
-        try:
-            # Get the position of the requester_user
-            room_users = await self.highrise.get_room_users()
-            requester_position = None
-            for user, position in room_users.content:
-                if user.id == requester_user.id:
-                    requester_position = position
-                    break
+    async def on_start(self, session_metadata: SessionMetadata) -> None:
+        print("Bot started and ready to go!")
+        await self.highrise.walk_to(Position(3.0, 0.25, 1.5, "FrontRight"))
 
-            # Find the target user and their position
-            for user, position in room_users.content:
-                if user.username.lower() == target_username.lower():
-                    z = requester_position.z
-                    new_z = z + 1  # Example: Move +1 on the z-axis (upwards)
-                    await self.teleport(user, Position(requester_position.x, requester_position.y, new_z, requester_position.facing))
-                    break
-        except Exception as e:
-            print(f"An error occurred while teleporting {target_username} next to {requester_user.username}: {e}")
+    async def on_user_join(self, user: User, position: Position) -> None:
+        print(f"{user.username} joined the room")
+        await self.highrise.send_whisper(user.id, f"❤️ Welcome {user.username}! Type /help for commands.")
+        await self.highrise.send_emote("dance-hipshake")
 
-    async def teleporter(self, message: str) -> None:
-        """Teleports the user to the specified user or coordinate"""
-        try:
-            command, username, coordinate = message.split(" ")
-        except ValueError:
-            return
+    async def on_chat(self, user: User, message: str) -> None:
+        print(f"{user.username}: {message}")
 
-        room_users = (await self.highrise.get_room_users()).content
-        user_id = None
-        for user in room_users:
-            if user[0].username.lower() == username.lower():
-                user_id = user[0].id
-                break
+        # Respond to the help command
+        if message.lower() == "!help":
+            await self.highrise.send_message(user.id, "Available commands: !heart, !tipall, !tipme, etc.")
 
-        if user_id is None:
-            return
-
-        try:
-            x, y, z = coordinate.split(",")
-        except ValueError:
-            return
-
-        await self.highrise.teleport(user_id=user_id, dest=Position(float(x), float(y), float(z)))
-
-    async def command_handler(self, user: User, message: str) -> None:
-        parts = message.split(" ")
-        command = parts[0][1:]
-        functions_folder = "functions"
-
-        for file_name in os.listdir(functions_folder):
-            if file_name.endswith(".py"):
-                module_name = file_name[:-3]
-                module_path = os.path.join(functions_folder, file_name)
-                
-                spec = importlib.util.spec_from_file_location(module_name, module_path)
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
-
-                if hasattr(module, command) and callable(getattr(module, command)):
-                    function = getattr(module, command)
-                    await function(self, user, message)
-
-    async def on_whisper(self, user: User, message: str) -> None:
-        print(f"{user.username} whispered: {message}")
-
-        if any(message.startswith(cmd) for cmd in ["/tele", "/tp", "/fly", "!tele", "!tp", "!fly"]):
-            if user.username in ["FallonXOXO", "Its.Melly.Moo.XoXo", "sh1n1gam1699", "Abbie_38", "hidinurbasement", "@emping", "BabygirlFae", "RayMG"]:
-                await self.teleporter(message)
-
-        if message.startswith("/") or message.startswith("-") or message.startswith(".") or message.startswith("!"):
-            await self.command_handler(user, message)
-
-        if any(message.startswith(cmd) for cmd in ["Summon", "Summom", "!summom", "/summom", "/summon", "!summon"]):
-            if user.username in ["FallonXOXO", "iced_yu", "@Its.Melly.Moo.XoXo", "mghaa"]:
-                target_username = message.split("@")[-1].strip()
-                await self.teleport_user_next_to(target_username, user)
-
-        if any(message.startswith(cmd) for cmd in ["Carteira", "Wallet", "wallet", "carteira"]):
-            if user.username in ["FallonXOXO", "RayMG"]:
-                wallet = (await self.highrise.get_wallet()).content
-                await self.highrise.send_whisper(user.id, f"AMOUNT : {wallet[0].amount} {wallet[0].type}")
-                await self.highrise.send_emote("emote-blowkisses")
-
-        if message.startswith("Iheart"):
+        # Heart command handling
+        if message.lower().startswith("!heart"):
             await self.send_heart(message, user)
 
-        if message.startswith("Follow"):
-            await self.follow_user(message, user)
+        # Tip all command handling
+        if message.lower().startswith("-tipall ") and user.username == "RayMG":
+            await self.handle_tip_all(user, message)
 
-        if user.username == "FallonXOXO":  # Only allow specific users to execute the following
-            await self.send_public_message(user, message)
+        # Tip me command handling
+        if message.lower().startswith("-tipme ") and user.username == "RayMG":
+            await self.handle_tip_me(user, message)
 
     async def send_heart(self, message: str, user: User) -> None:
-        # Parse the message for number of hearts and target user
+        # Parse the heart command
         parts = message.split()
-        if len(parts) < 2:
-            return
-        
-        target = parts[1]
-        try:
-            count = int(parts[2]) if len(parts) > 2 else 1
-            if count > 100:
-                count = 100
-        except ValueError:
-            return
-
-        hearts = "❤️" * count
-        if target.lower() == "all":
-            await self.highrise.send_room_message(f"{user.username} sends {hearts} to everyone!")
+        if len(parts) == 3 and parts[1].isdigit() and user.username in self.moderators:
+            count = int(parts[1])
+            recipient = parts[2].replace('@', '')  # Extract the username
+            
+            if count < 1 or count > 10:
+                await self.highrise.send_message(user.id, "You can send between 1 to 10 hearts.")
+                return
+            
+            heart_message = "❤️" * count  # Create heart message
+            await self.highrise.send_message(recipient, heart_message)
+            await self.highrise.send_message(user.id, f"Sent {count} hearts to {recipient}!")
         else:
-            await self.highrise.send_whisper(target, f"{user.username} sends you {hearts}!")
+            await self.highrise.send_message(user.id, "Usage: !heart [number]@[username] (1-10)")
 
-    async def send_public_message(self, user: User, message: str) -> None:
-        await self.highrise.send_room_message(message)
+    async def handle_tip_all(self, user: User, message: str) -> None:
+        parts = message.split(" ")
+        if len(parts) != 2:
+            await self.highrise.send_message(user.id, "Invalid command")
+            return
+        # Check if the amount is valid
+        try:
+            amount = int(parts[1])
+        except ValueError:
+            await self.highrise.chat("Invalid amount")
+            return
+        # Check if the bot has the amount
+        bot_wallet = await self.highrise.get_wallet()
+        bot_amount = bot_wallet.content[0].amount
+        if bot_amount < amount:
+            await self.highrise.chat("Not enough funds")
+            return
+        # Get all users in the room
+        room_users = await self.highrise.get_room_users()
+        # Check if the bot has enough funds to tip all users the specified amount
+        total_tip_amount = amount * len(room_users.content)
+        if bot_amount < total_tip_amount:
+            await self.highrise.chat("Not enough funds to tip everyone")
+            return
+        # Tip each user in the room the specified amount
+        bars_dictionary = {
+            10000: "gold_bar_10k",
+            5000: "gold_bar_5000",
+            1000: "gold_bar_1k",
+            500: "gold_bar_500",
+            100: "gold_bar_100",
+            50: "gold_bar_50",
+            10: "gold_bar_10",
+            5: "gold_bar_5",
+            1: "gold_bar_1"
+        }
+        fees_dictionary = {
+            10000: 1000,
+            5000: 500,
+            1000: 100,
+            500: 50,
+            100: 10,
+            50: 5,
+            10: 1,
+            5: 1,
+            1: 1
+        }
+        for room_user in room_users.content:
+            tip = []
+            remaining_amount = amount
+            for bar in bars_dictionary:
+                if remaining_amount >= bar:
+                    bar_amount = remaining_amount // bar
+                    remaining_amount = remaining_amount % bar
+                    for _ in range(bar_amount):
+                        tip.append(bars_dictionary[bar])
+            total = amount + sum(fees_dictionary[bar] for bar in tip)
+            if total > bot_amount:
+                await self.highrise.chat("Not enough funds")
+                return
+            for bar in tip:
+                await self.highrise.tip_user(room_user.id, bar)
 
-    async def follow_user(self, message: str, user: User) -> None:
-        # Extract user ID to follow
-        user_id = message.split("@")[-1].strip()
-        await self.highrise.follow(user_id)
+    async def handle_tip_me(self, user: User, message: str) -> None:
+        try:
+            amount_str = message.split(" ")[1]
+            amount = int(amount_str)
+            bars_dictionary = {
+                10000: "gold_bar_10k",
+                5000: "gold_bar_5000",
+                1000: "gold_bar_1k",
+                500: "gold_bar_500",
+                100: "gold_bar_100",
+                50: "gold_bar_50",
+                10: "gold_bar_10",
+                5: "gold_bar_5",
+                1: "gold_bar_1"
+            }
+            fees_dictionary = {
+                10000: 1000,
+                5000: 500,
+                1000: 100,
+                500: 50,
+                100: 10,
+                50: 5,
+                10: 1,
+                5: 1,
+                1: 1
+            }
+            # Get bot's wallet balance
+            bot_wallet = await self.highrise.get_wallet()
+            bot_amount = bot_wallet.content[0].amount
+            # Check if bot has enough funds
+            if bot_amount < amount:
+                await self.highrise.chat("Not enough funds in the bot's wallet.")
+                return
+            # Convert amount to bars and calculate total
+            tip = []
+            total = 0
+            for bar in sorted(bars_dictionary.keys(), reverse=True):
+                if amount >= bar:
+                    bar_amount = amount // bar
+                    amount %= bar
+                    tip.extend([bars_dictionary[bar]] * bar_amount)
+                    total += bar_amount * bar + fees_dictionary[bar]
+            if total > bot_amount:
+                await self.highrise.chat("Not enough funds to tip the specified amount.")
+                return
+            # Send tip to the user who issued the command
+            for bar in tip:
+                await self.highrise.tip_user(user.id, bar)
+            await self.highrise.chat(f"You have been tipped {amount_str}.")
+        except (IndexError, ValueError):
+            await self.highrise.chat("Invalid tip amount. Please specify a valid number.")
 
-    async def on_user_move(self, user: User, pos: Position) -> None:
-        print(f"{user.username} moved to {pos}")
+# To run the bot
+if __name__ == "__main__":
+    import asyncio
+    from highrise import Highrise
 
-    async def on_emote(self, user: User, emote_id: str, receiver: Optional[User]) -> None:
-        print(f"{user.username} emoted: {emote_id}")
+    highrise = Highrise(token="YOUR_TOKEN")  # Replace with your token
+    bot = HighriseBot()
+    
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(bot.start(highrise))
