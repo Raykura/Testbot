@@ -1105,117 +1105,144 @@ class Bot(BaseBot):
             wallet = (await self.highrise.get_wallet()).content
             await self.highrise.send_whisper(user.id,f"AMOUNT  : {wallet[0].amount} {wallet[0].type}")
             await self.highrise.send_emote("dance-tiktok14")
-              
-        if message.startswith("!kick"):
-          if user.username == "FallonXOXO" or user.username == "RayMG":
-              pass
-          else:
-              await self.highrise.chat("🤍.")
-              return
-          #separete message into parts
-          parts = message.split()
-          #check if message is valid "kick @username"
-          if len(parts) != 2:
-              await self.highrise.chat("🤍.")
-              return
-          #checks if there's a @ in the message
-          if "@" not in parts[1]:
-              username = parts[1]
-          else:
-              username = parts[1][1:]
-          #check if user is in room
-          room_users = (await self.highrise.get_room_users()).content
-          for room_user, pos in room_users:
-              if room_user.username.lower() == username.lower():
-                  user_id = room_user.id
-                  break
-          if "user_id" not in locals():
-              await self.highrise.chat("user not found, please fix the code coordinate ")
-              return
-          #kick user
-          try:
-              await self.highrise.moderate_room(user_id, "kick")
-          except Exception as e:
-              await self.highrise.chat(f"{e}")
-              return
-          #send message to chat
-          await self.highrise.chat(f"{username} He was banned from the room!!")
 
-    async def teleport(self, user: User, position: Position):
+         async def kick_user(self, user: User, message: str):
+    # Check if user is authorized to use this command
+    if user.username not in ["FallonXOXO", "RayMG"]:
+        await self.highrise.chat("🤍.")
+        return
+
+    # Separate message into parts
+    parts = message.split()
+    # Check if message is valid "kick @username"
+    if len(parts) != 2 or "@" not in parts[1]:
+        await self.highrise.chat("Usage: !kick @username")
+        return
+
+    username = parts[1][1:]  # Remove '@'
+    user_id = await self.get_user_id(username)
+    if user_id:
         try:
-            await self.highrise.teleport(user.id, position)
+            await self.highrise.moderate_room(user_id, "kick")
+            await self.highrise.chat(f"{username} has been kicked from the room!")
         except Exception as e:
-            print(f"Caught Teleport Error: {e}")
+            await self.highrise.chat(f"Error: {e}")
+    else:
+        await self.highrise.chat("User not found.")
 
-    async def teleport_to_user(self, user: User, target_username: str) -> None:
+async def mute_user(self, user: User, message: str):
+    if user.username not in ["FallonXOXO", "RayMG"]:
+        await self.highrise.chat("🤍.")
+        return
+
+    parts = message.split()
+    if len(parts) != 2 or "@" not in parts[1]:
+        await self.highrise.chat("Usage: !mute @username")
+        return
+
+    username = parts[1][1:]  # Remove '@'
+    user_id = await self.get_user_id(username)
+    if user_id:
+        # Implement your mute logic here
+        await self.highrise.chat(f"{username} has been muted!")
+    else:
+        await self.highrise.chat("User not found.")
+
+async def ban_user(self, user: User, message: str):
+    if user.username not in ["FallonXOXO", "RayMG"]:
+        await self.highrise.chat("🤍.")
+        return
+
+    parts = message.split()
+    if len(parts) != 2 or "@" not in parts[1]:
+        await self.highrise.chat("Usage: !ban @username")
+        return
+
+    username = parts[1][1:]  # Remove '@'
+    user_id = await self.get_user_id(username)
+    if user_id:
         try:
-            room_users = await self.highrise.get_room_users()
-            for target, position in room_users.content:
-                if target.username.lower() == target_username.lower():
-                    z = position.z
-                    new_z = z - 1
-                    await self.teleport(user, Position(position.x, position.y, new_z, position.facing))
-                    break
+            await self.highrise.moderate_room(user_id, "ban")
+            await self.highrise.chat(f"{username} has been banned from the room!")
         except Exception as e:
-            print(f"An error occurred while teleporting to {target_username}: {e}")
+            await self.highrise.chat(f"Error: {e}")
+    else:
+        await self.highrise.chat("User not found.")
 
-    async def teleport_user_next_to(self, target_username: str, requester_user: User) -> None:
-        try:
-            # Get the position of the requester_user
-            room_users = await self.highrise.get_room_users()
-            requester_position = None
-            for user, position in room_users.content:
-                if user.id == requester_user.id:
-                    requester_position = position
-                    break
+async def summon_user(self, user: User, message: str):
+    if user.username not in ["FallonXOXO", "Its.Melly.Moo.XoXo", "mghaa"]:  # Add any other VIP usernames here
+        await self.highrise.chat("🤍.")
+        return
 
-            # Find the target user and their position
-            for user, position in room_users.content:
-                if user.username.lower() == target_username.lower():
-                    z = requester_position.z
-                    new_z = z + 1  # Example: Move +1 on the z-axis (upwards)
-                    await self.teleport(user, Position(requester_position.x, requester_position.y, new_z, requester_position.facing))
-                    break
-        except Exception as e:
-            print(f"An error occurred while teleporting {target_username} next to {requester_user.username}: {e}")
-          
-    async def teleporter(self, message: str)-> None:
-        """
-            Teleports the user to the specified user or coordinate
-            Usage: /teleport <username> <x,y,z>
-                                                                """
-        #separates the message into parts
-        #part 1 is the command "/teleport"
-        #part 2 is the name of the user to teleport to (if it exists)
-        #part 3 is the coordinates to teleport to (if it exists)
-        try:
-            command, username, coordinate = message.split(" ")
-        except:
-            
-            return
-        
-        #checks if the user is in the room
-        room_users = (await self.highrise.get_room_users()).content
-        for user in room_users:
-            if user[0].username.lower() == username.lower():
-                user_id = user[0].id
-                break
-        #if the user_id isn't defined, the user isn't in the room
-        if "user_id" not in locals():
-            
-            return
-            
-        #checks if the coordinate is in the correct format (x,y,z)
-        try:
-            x, y, z = coordinate.split(",")
-        except:
-          
-            return
-        
-        #teleports the user to the specified coordinate
-        await self.highrise.teleport(user_id = user_id, dest = Position(float(x), float(y), float(z)))
+    parts = message.split()
+    if len(parts) != 2 or "@" not in parts[1]:
+        await self.highrise.chat("Usage: !summon @username")
+        return
 
+    target_username = parts[1][1:]  # Remove '@'
+    await self.teleport_user_next_to(target_username, user)
+
+async def get_user_id(self, username: str):
+    """Utility method to get user ID by username."""
+    room_users = (await self.highrise.get_room_users()).content
+    for room_user, pos in room_users:
+        if room_user.username.lower() == username.lower():
+            return room_user.id
+    return None
+
+# Integrate your command handler logic to call these functions
+async def command_handler(self, user: User, message: str):
+    parts = message.split(" ")
+    command = parts[0][1:]
+
+    if command == "kick":
+        await self.kick_user(user, message)
+    elif command == "mute":
+        await self.mute_user(user, message)
+    elif command == "ban":
+        await self.ban_user(user, message)
+    elif command == "summon":
+        await self.summon_user(user, message)
+    # Continue handling other commands...
+       
     async def command_handler(self, user: User, message: str):
+        parts = message.split(" ")
+        command = parts[0][1:]
+        # Check if user is mod or VIP
+        if user.username in ["RayMG", "FallonXOXO", "Its.Melly.Moo.XoXo", "mghaa"]:  # Example moderator list
+            is_mod = True
+        else:
+            is_mod = False
+        
+        if command == "kick":
+            if is_mod:
+                await self.kick_user(user, message)
+            else:
+                await self.highrise.chat("You do not have permission to kick users.")
+            return
+
+        if command == "mute":
+            if is_mod:
+                await self.mute_user(user, message)
+            else:
+                await self.highrise.chat("You do not have permission to mute users.")
+            return
+
+        if command == "ban":
+            if is_mod:
+                await self.ban_user(user, message)
+            else:
+                await self.highrise.chat("You do not have permission to ban users.")
+            return
+
+        if command == "summon":
+            if is_mod or user.username in ["VIP1", "VIP2"]:  # Replace with actual VIP usernames
+                await self.summon_user(user, message)
+            else:
+                await self.highrise.chat("You do not have permission to summon users.")
+            return
+
+        # Continue with existing function loading logic...
         parts = message.split(" ")
         command = parts[0][1:]
         functions_folder = "functions"
