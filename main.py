@@ -23,6 +23,26 @@ class Bot(BaseBot):
     async def on_chat(self, user: User, message: str) -> None:
         print(f"{user.username}: {message}")
 
+        # Handle wallet command
+        if message.lower().startswith("!wallet"):
+            await self.display_wallet(user)
+
+    async def on_whisper(self, user: User, message: str):
+        # Check if the user is the host (RayMG) or a moderator
+        if user.username == "RayMG" or user.is_moderator:
+            if message.startswith("-w") or message.startswith("!w"):
+                await self.send_room_message(f"{user.username} whispered: {message[2:].strip()}")
+            else:
+                await self.send_room_message(f"{user.username} whispered: {message}")
+
+    async def display_wallet(self, user: User) -> None:
+        # Get the bot's wallet information
+        bot_wallet = await self.highrise.get_wallet()
+        bot_amount = bot_wallet.content[0].amount
+        await self.highrise.chat(f"The bot's wallet contains {bot_amount} gold bars.")
+
+# Additional bot methods can go here...
+
         # Clap reaction logic with specified number of claps
         if message.lower().startswith("clap"):
             parts = message.split("@")
