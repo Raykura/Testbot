@@ -1,9 +1,8 @@
-from highrise import *
-from highrise.models import *
-import asyncio
-from asyncio import Task
+# follow.py
 
-# Follow function to follow a user
+from highrise import BaseBot, User, Position
+import asyncio
+
 async def follow(self: BaseBot, user: User, target_username: str) -> None:
     async def following_loop() -> None:
         while True:
@@ -40,7 +39,6 @@ async def follow(self: BaseBot, user: User, target_username: str) -> None:
     await self.highrise.chat(f"Coming to follow you, {target_username}! 🚶‍♂️")
 
 
-# Stop function to stop following a user
 async def stop(self: BaseBot, user: User, target_username: str) -> None:
     taskgroup = self.highrise.tg
     task_list = list(taskgroup._tasks)
