@@ -17,9 +17,9 @@ class Bot(BaseBot):
         await self.highrise.send_emote("emote-lust", user.id) 
 
     async def on_user_whisper(self, user: User, message: str) -> None:
-        # Check if the whisper is addressed to the bot
-        if message:  # Ensure there is a message
+        # Check if there is a message
+        if message:  
             # Broadcast the message to the public room
             await self.highrise.send_message(f"{user.username} whispered: {message}")
 
-# Ensure the bot is initialized correctly
+# Make sure to initialize your bot correctly here
