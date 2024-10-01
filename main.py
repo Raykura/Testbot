@@ -32,18 +32,6 @@ class Bot(BaseBot):
         await self.highrise.send_emote("emote-lust", user.id) 
 
 
-# List of random flirty messages
-flirty_messages = [
-    "You're amazing! Sending you a heart ❤️",
-    "Just wanted to let you know how wonderful you are! 💖",
-    "You make my day brighter! Here’s a heart for you! 💕",
-    "You have a special place in my heart! ❤️",
-    "Is your name Google? Because you have everything I’m searching for! 💘",
-    "You're like a fine wine; you get better with time! 🍷❤️",
-    "Sending you hearts because you're so lovely! 💗",
-]
-
-
     async def on_chat(self, user: User, message: str) -> None:
         print(f"{user.username}: {message}")
 
