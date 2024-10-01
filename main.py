@@ -37,7 +37,8 @@ class Bot(BaseBot):
       
     async def on_chat(self, user: User, message: str) -> None:
         print(f"{user.username}: {message}")  
-if message.startswith("!heart"):
+             
+        if message.startswith("!heart"):
             await self.handle_heart_command(user, message)
 
         # Check for clap commands
