@@ -1,24 +1,24 @@
 import random
 import os
 import importlib.util
-from highrise import *
+from highrise import*
 from highrise import BaseBot, Position
 from highrise.models import SessionMetadata
 
-casa = ["I Marry You 💍", "Of course I do 💍❤️", "I don't want to 💍💔", "Of course I don't 💍💔", "I Love You Of course I marry you 💍"]
+casa = ["I Marry You 💍","Of course I do 💍❤️","I don't want to 💍💔","Of course I don't 💍💔","I Love You Of course I marry you 💍"]
 
-class MGBot(BaseBot):
+class Bot(BaseBot):
     async def on_start(self, session_metadata: SessionMetadata) -> None:
         print("working")
-        await self.highrise.walk_to(Position(3.0, 0.25, 1.5, "FrontRight"))
+        await self.highrise.walk_to(Position(3.0 , 0.25 , 1.5, "FrontRight"))
 
     async def on_user_join(self, user: User, position: Position | AnchorPosition) -> None:
-        print(f"{user.username} entrou na sala")
+        print(f"{user.username} entrou na sala")   
         await self.highrise.send_whisper(user.id, f"❤️Welcome [{user.username}] Use: [!emote list] or [1-97] For Dances & Emotes")
         await self.highrise.send_whisper(user.id, f"❤️Use: [/help] For More Information.")
         await self.highrise.send_whisper(user.id, f"❤️.🤍.")
         await self.highrise.send_emote("dance-hipshake")
-        await self.highrise.send_emote("emote-lust", user.id)
+        await self.highrise.send_emote("emote-lust", user.id) 
 
     async def on_chat(self, user: User, message: str) -> None:
         print(f"{user.username}: {message}")
@@ -35,18 +35,6 @@ class MGBot(BaseBot):
 
             else:  # "clap@<username> <number>"
                 await self.clap_for_user(user, parts)
-
-        # Check wallet command
-        if message.lower().startswith("!wallet"):
-            await self.display_wallet(user)
-
-    async def on_whisper(self, user: User, message: str):
-        # Check if the user is the host (RayMG) or a moderator
-        if user.username == "RayMG" or user.is_moderator:
-            if message.startswith("-w") or message.startswith("!w"):
-                await self.send_room_message(f"{user.username} whispered: {message[2:].strip()}")
-            else:
-                await self.send_room_message(f"{user.username} whispered: {message}")
 
     async def clap_for_all(self, user: User, parts: list) -> None:
         # Check if the user is the host or a moderator
@@ -211,5 +199,3 @@ class MGBot(BaseBot):
             await self.highrise.chat(f"You have been tipped {amount_str}.")
         except (IndexError, ValueError):
             await self.highrise.chat("Invalid tip amount. Please specify a valid number.")
-
-    # Display the bot's wallet.
