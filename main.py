@@ -17,6 +17,7 @@ class Bot(BaseBot):
         await self.highrise.send_emote("emote-lust", user.id)
 
     async def on_user_whisper(self, user: User, message: str) -> None:
+        print(f"Received whisper from {user.username}: {message}")  # Debugging line
         # Ensure the message is not empty
         if message:
             # Check if the user is a host or moderator
