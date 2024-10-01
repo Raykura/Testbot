@@ -20,44 +20,22 @@ class Bot(BaseBot):
         await self.highrise.send_emote("dance-hipshake")
         await self.highrise.send_emote("emote-lust", user.id)
 
-    async def on_chat(self, user: User, message: str) -> None:
-        print(f"{user.username}: {message}")
+async def on_chat(self, user: User, message: str) -> None:
+    print(f"{user.username}: {message}")
 
-        # Follow logic
-        if message.lower().startswith("follow@"):
-            parts = message.split("@")
-            if len(parts) == 2:
-                target_username = parts[1].strip()
-                # Check if the user is host or moderator
-                room_users = await self.highrise.get_room_users()
-                room_user = next((ru for ru, _ in room_users.content if ru.id == user.id), None)
-
-                if room_user and (room_user.is_host or room_user.is_moderator):
-                    target_user = None
-                    # Find the specified user in the room
-                    for room_user, _ in room_users.content:
-                        if room_user.username.lower() == target_username.lower():
-                            target_user = room_user
-                            break
-                    
-                    if target_user:
-                        # Follow the target user (implement follow logic as needed)
-                        await self.highrise.follow(target_user.id)
-                        await self.highrise.chat(f"{user.username} is now following {target_user.username}!")
-                    else:
-                        await self.highrise.chat(f"User '{target_username}' not found in the room.")
-                else:
-                    await self.highrise.chat("Only the host or a moderator can follow users.")
-
-        # Handle whispers with !whisper or -whisper
-        if message.lower().startswith("!whisper ") or message.lower().startswith("-whisper "):
-            # Extract the message content
-            whisper_message = message.split(" ", 1)[1].strip()  # Remove the command prefix and get the rest of the message
-            # Check if the user is host or moderator
+    # Follow logic
+    if message.lower().startswith("follow@"):
+        parts = message.split("@")
+        if len(parts) == 2:
+            target_username = parts[1].strip()
             room_users = await self.highrise.get_room_users()
             room_user = next((ru for ru, _ in room_users.content if ru.id == user.id), None)
 
             if room_user and (room_user.is_host or room_user.is_moderator):
-                await self.highrise.chat(f"{user.username} whispered: {whisper_message}")
+                await follow(self, user, target_username)
+            else:
+                await self.highrise.chat("Only the host or a moderator can follow users.")
+
+    # Add other chat handling logic, like whisper
             else:
                 await self.highrise.chat("Only hosts or moderators can send whispers.")
