@@ -17,9 +17,10 @@ class Bot(BaseBot):
         await self.highrise.send_emote("emote-lust", user.id) 
 
     async def on_user_whisper(self, user: User, message: str) -> None:
-        # Check if the message is directed at the bot
-        if message.startswith(f"@{self.highrise.bot_id}") and len(message.split()) > 1:
-            actual_message = message.split(maxsplit=1)[1]  # Get the actual message after @bot.id
+        # Check if the message starts with the whisper command
+        if message.startswith("!whisper ") or message.startswith("-whisper "):
+            # Extract the actual message
+            actual_message = message.split(maxsplit=1)[1] if len(message.split()) > 1 else ""
             # Check if the user is a host or moderator
             if user.role in ["host", "moderator"]:  # Adjust roles as per your application's role definitions
                 # Display the message in the public room
