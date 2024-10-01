@@ -1,6 +1,0 @@
-streamlit==1.20.0
-requests
-pandas
-numpy
-python-dotenv  # if you're using environment variables
-highrise-python  # if you're using a specific library for Highrise
