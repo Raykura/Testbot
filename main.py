@@ -30,12 +30,14 @@ class Bot(BaseBot):
 
     async def on_user_message(self, user: User, message: str) -> None:
         # Check if the message is directed to the bot
-        if message.startswith('@MGBot'):
+        if message.startswith('MGBot'):  # Changed to listen for 'MGBot' instead of '@MGBot'
             # Extract the actual message following the bot mention
-            actual_message = message[len('@MGBot'):].strip()
+            actual_message = message[len('MGBot'):].strip()
             if user.role in ["host", "moderator"]:  # Adjust these roles as needed
                 # Broadcast the message to the public room
                 await self.highrise.send_message(f"{user.username} said: {actual_message}")
             else:
                 # Inform the user they do not have permission to send this command
                 await self.highrise.send_whisper(user.id, "❌ You do not have permission to use this command.")
+
+# Ensure the bot is initialized correctly
