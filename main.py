@@ -22,9 +22,11 @@ pescar = ["🥈YOU WON THE MEDAL: SILVER FISHERMAN🥈","🥉YOU WON THE MEDAL: 
 class Bot(BaseBot):
     async def on_start(self, session_metadata: SessionMetadata) -> None:
         print("working")
+             
         await self.highrise.walk_to(Position(3.0 , 0.25 , 1.5, "FrontRight"))
     async def on_user_join(self, user: User, position: Position | AnchorPosition) -> None:
         print(f"{user.username} entrou na sala")   
+             
         await self.highrise.send_whisper(user.id,f"❤️Welcome [{user.username}] Use: [!emote list] or [1-97] For Dances & Emotes")
 
         await self.highrise.send_whisper(user.id,f"❤️Use: [/help] For More Informations.")
@@ -161,6 +163,7 @@ class Bot(BaseBot):
               if bot_amount < total_tip_amount:
                   await self.highrise.chat("Not enough funds to tip everyone")
                   return
+                       
               # Tip each user in the room the specified amount
               for room_user, pos in room_users.content:
                   bars_dictionary = {
