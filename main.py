@@ -49,10 +49,15 @@ class Bot(BaseBot):
                 else:
                     await self.highrise.chat("Only the host or a moderator can follow users.")
 
-        # Handle whispers from hosts or moderators
-        if message.startswith('/whisper'):
+        # Handle whispers with !whisper or -whisper
+        if message.lower().startswith("!whisper ") or message.lower().startswith("-whisper "):
             # Extract the message content
-            whisper_message = message[8:].strip()  # Remove the command prefix
+            whisper_message = message.split(" ", 1)[1].strip()  # Remove the command prefix and get the rest of the message
             # Check if the user is host or moderator
+            room_users = await self.highrise.get_room_users()
+            room_user = next((ru for ru, _ in room_users.content if ru.id == user.id), None)
+
             if room_user and (room_user.is_host or room_user.is_moderator):
                 await self.highrise.chat(f"{user.username} whispered: {whisper_message}")
+            else:
+                await self.highrise.chat("Only hosts or moderators can send whispers.")
