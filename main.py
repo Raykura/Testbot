@@ -1,6 +1,8 @@
 import random
-from highrise import *
-from highrise import BaseBot, Position
+import os
+import importlib.util
+from highrise import*
+from highrise import BaseBot,Position
 from highrise.models import SessionMetadata
 
 # List of random flirty messages
