@@ -5,8 +5,6 @@ from highrise import*
 from highrise import BaseBot, Position
 from highrise.models import SessionMetadata
 
-casa = ["I Marry You 💍","Of course I do 💍❤️","I don't want to 💍💔","Of course I don't 💍💔","I Love You Of course I marry you 💍"]
-
 # List of random flirty messages
 flirty_messages = [
     "You're amazing! Sending you a heart ❤️",
@@ -18,29 +16,76 @@ flirty_messages = [
     "Sending you hearts because you're so lovely! 💗",
 ]
 
-class Bot(BaseBot):
+class MGBot(BaseBot):
     async def on_start(self, session_metadata: SessionMetadata) -> None:
-        print("working")
-        await self.highrise.walk_to(Position(3.0 , 0.25 , 1.5, "FrontRight"))
+        print("Bot is online")
+        await self.highrise.walk_to(Position(3.0, 0.25, 1.5, "FrontRight"))
 
     async def on_user_join(self, user: User, position: Position | AnchorPosition) -> None:
-        print(f"{user.username} entrou na sala")   
-        await self.highrise.send_whisper(user.id, f"❤️Welcome [{user.username}] Use: [!emote list] or [1-97] For Dances & Emotes")
-        await self.highrise.send_whisper(user.id, f"❤️Use: [/help] For More Information.")
-        await self.highrise.send_whisper(user.id, f"❤️.🤍.")
-        await self.highrise.send_emote("dance-hipshake")
-        await self.highrise.send_emote("emote-lust", user.id) 
-
+        print(f"{user.username} entrou na sala")
+        await self.highrise.send_whisper(user.id, f"❤️ Welcome [{user.username}] Use: [!emote list] or [1-97] For Dances & Emotes")
 
     async def on_chat(self, user: User, message: str) -> None:
         print(f"{user.username}: {message}")
 
-        # Check if the message is in the format heart@<user.id> or Heart@<user.id>
-        if message.lower().startswith("heart@"):
+        # Check for heart commands
+        if message.startswith("!heart"):
+            await self.handle_heart_command(user, message)
+
+        # Check for clap commands
+        elif message.startswith("!clap"):
+            await self.handle_clap_command(user, message)
+
+        # Check for heart reactions from any user
+        elif message.lower().startswith("heart@"):
             target_user_id = message.split('@')[1].strip()
             await self.send_heart_to_user(user, target_user_id)
 
-    async def send_heart_to_user(self, sender: User, target_user_id: str) -> None:
+        # Check for clap reactions from any user
+        elif message.lower().startswith("clap@"):
+            target_user_id = message.split('@')[1].strip()
+            await self.send_clap_to_user(user, target_user_id)
+
+    async def handle_heart_command(self, user: User, message: str) -> None:
+        parts = message.split()
+        if len(parts) == 3 and parts[1].lower() == "all":
+            try:
+                num_hearts = int(parts[2])
+                if self.is_authorized(user) and 1 <= num_hearts <= 20:
+                    await self.send_hearts_to_all(user, num_hearts)
+                else:
+                    await self.highrise.chat("You are not authorized or the number of hearts is invalid (1-20).")
+            except ValueError:
+                await self.highrise.chat("Invalid number of hearts.")
+
+        elif len(parts) == 2 and "@" in parts[1]:  # Check for sending heart to a specific user
+            target_user_id = parts[1].split('@')[1].strip()
+            await self.send_heart_to_user(user, target_user_id, parts[2] if len(parts) > 2 else None)
+
+    async def handle_clap_command(self, user: User, message: str) -> None:
+        parts = message.split()
+        if len(parts) == 3 and parts[1].lower() == "all":
+            try:
+                num_claps = int(parts[2])
+                if self.is_authorized(user) and 1 <= num_claps <= 20:
+                    await self.send_claps_to_all(user, num_claps)
+                else:
+                    await self.highrise.chat("You are not authorized or the number of claps is invalid (1-20).")
+            except ValueError:
+                await self.highrise.chat("Invalid number of claps.")
+
+        elif len(parts) == 2 and "@" in parts[1]:  # Check for sending clap to a specific user
+            target_user_id = parts[1].split('@')[1].strip()
+            await self.send_clap_to_user(user, target_user_id)
+
+    async def send_hearts_to_all(self, user: User, num_hearts: int) -> None:
+        room_users = await self.highrise.get_room_users()
+        for room_user, _ in room_users.content:
+            for _ in range(num_hearts):
+                await self.highrise.react("heart", room_user.id)
+        await self.highrise.chat(f"{user.username} sent {num_hearts} hearts to everyone!")
+
+    async def send_heart_to_user(self, sender: User, target_user_id: str, amount: str = None) -> None:
         room_users = await self.highrise.get_room_users()
         target_user = None
 
@@ -51,204 +96,39 @@ class Bot(BaseBot):
                 break
 
         if target_user:
-            await self.highrise.react("heart", target_user.id)  # Send the heart reaction
+            # Default to 1 heart if no amount specified
+            num_hearts = 1
+            if amount and amount.isdigit() and int(amount) <= 20:
+                num_hearts = int(amount)
+            for _ in range(num_hearts):
+                await self.highrise.react("heart", target_user.id)  # Send the heart reaction
             flirty_message = random.choice(flirty_messages)
-            await self.highrise.chat(f"{sender.username} sent a heart to {target_user.username}! {flirty_message}")
+            await self.highrise.chat(f"{sender.username} sent {num_hearts} hearts to {target_user.username}! {flirty_message}")
         else:
             await self.highrise.chat(f"User with ID '{target_user_id}' not found in the room.")
-        # Handle wallet command
-        if message.lower().startswith("!wallet"):
-            await self.display_wallet(user)
 
-    async def on_whisper(self, user: User, message: str):
-        # Check if the user is the host (RayMG) or a moderator
-        if user.username == "RayMG" or user.is_moderator:
-            if message.startswith("-w") or message.startswith("!w"):
-                await self.send_room_message(f"{user.username} whispered: {message[2:].strip()}")
-            else:
-                await self.send_room_message(f"{user.username} whispered: {message}")
-
-    async def display_wallet(self, user: User) -> None:
-        # Get the bot's wallet information
-        bot_wallet = await self.highrise.get_wallet()
-        bot_amount = bot_wallet.content[0].amount
-        await self.highrise.chat(f"The bot's wallet contains {bot_amount} gold bars.")
-
-# Additional bot methods can go here...
-
-        # Clap reaction logic with specified number of claps
-        if message.lower().startswith("clap"):
-            parts = message.split("@")
-            
-            if len(parts) == 1:  # No @username, just "clap" command (self clap)
-                await self.clap(user, user, 1)  # Default 1 clap for self
-
-            elif parts[1].strip().lower().startswith("all"):  # "clap@all <number>"
-                await self.clap_for_all(user, parts)
-
-            else:  # "clap@<username> <number>"
-                await self.clap_for_user(user, parts)
-
-    async def clap_for_all(self, user: User, parts: list) -> None:
-        # Check if the user is the host or a moderator
+    async def send_claps_to_all(self, user: User, num_claps: int) -> None:
         room_users = await self.highrise.get_room_users()
-        room_user = next((ru for ru, _ in room_users.content if ru.id == user.id), None)
-        
-        if room_user and (room_user.is_host or room_user.is_moderator):
-            # Default to 1 clap if no amount is specified
-            num_claps = 1
-            if len(parts) > 1 and parts[1].strip().lower().split(" ")[-1].isdigit():
-                num_claps = int(parts[1].strip().lower().split(" ")[-1])
+        for room_user, _ in room_users.content:
+            for _ in range(num_claps):
+                await self.highrise.react("clap", room_user.id)
+        await self.highrise.chat(f"{user.username} clapped for everyone {num_claps} times!")
 
-            for room_user, _ in room_users.content:
-                await self.clap(user, room_user, num_claps)
-
-            await self.highrise.chat(f"{user.username} clapped for everyone {num_claps} times!")
-        else:
-            await self.highrise.chat("Only the host or a moderator can clap for everyone.")
-
-    async def clap_for_user(self, user: User, parts: list) -> None:
-        target_username = parts[1].split(" ")[0].strip()  # Get the target username
-        num_claps = 1  # Default to 1 clap
-
-        if len(parts[1].split(" ")) > 1:  # If a number of claps is specified
-            try:
-                num_claps = int(parts[1].split(" ")[1].strip())
-            except ValueError:
-                await self.highrise.chat("Invalid number of claps.")
-                return
-
+    async def send_clap_to_user(self, sender: User, target_user_id: str) -> None:
         room_users = await self.highrise.get_room_users()
         target_user = None
 
         # Find the specified user in the room
         for room_user, _ in room_users.content:
-            if room_user.username.lower() == target_username.lower():
+            if str(room_user.id) == target_user_id:
                 target_user = room_user
                 break
 
         if target_user:
-            await self.clap(user, target_user, num_claps)
-            await self.highrise.chat(f"{user.username} clapped for {target_user.username} {num_claps} times!")
+            await self.highrise.react("clap", target_user.id)
+            await self.highrise.chat(f"{sender.username} clapped for {target_user.username}!")
         else:
-            await self.highrise.chat(f"User '{target_username}' not found in the room.")
+            await self.highrise.chat(f"User with ID '{target_user_id}' not found in the room.")
 
-    async def clap(self, sender: User, target: User, num_claps: int) -> None:
-        for _ in range(num_claps):
-            await self.highrise.react("clap", target.id)
-
-    # Tip all users command
-    async def tip_all_users(self, user: User, message: str) -> None:
-        parts = message.split(" ")
-        if len(parts) != 2:
-            await self.highrise.send_message(user.id, "Invalid command")
-            return
-        try:
-            amount = int(parts[1])
-        except ValueError:
-            await self.highrise.chat("Invalid amount")
-            return
-
-        bot_wallet = await self.highrise.get_wallet()
-        bot_amount = bot_wallet.content[0].amount
-        if bot_amount < amount:
-            await self.highrise.chat("Not enough funds")
-            return
-
-        room_users = await self.highrise.get_room_users()
-        total_tip_amount = amount * len(room_users.content)
-        if bot_amount < total_tip_amount:
-            await self.highrise.chat("Not enough funds to tip everyone")
-            return
-
-        bars_dictionary = {
-            10000: "gold_bar_10k",
-            5000: "gold_bar_5000",
-            1000: "gold_bar_1k",
-            500: "gold_bar_500",
-            100: "gold_bar_100",
-            50: "gold_bar_50",
-            10: "gold_bar_10",
-            5: "gold_bar_5",
-            1: "gold_bar_1"
-        }
-        fees_dictionary = {
-            10000: 1000,
-            5000: 500,
-            1000: 100,
-            500: 50,
-            100: 10,
-            50: 5,
-            10: 1,
-            5: 1,
-            1: 1
-        }
-
-        for room_user, pos in room_users.content:
-            tip = []
-            remaining_amount = amount
-            for bar in bars_dictionary:
-                if remaining_amount >= bar:
-                    bar_amount = remaining_amount // bar
-                    remaining_amount = remaining_amount % bar
-                    for i in range(bar_amount):
-                        tip.append(bars_dictionary[bar])
-                        total = bar + fees_dictionary[bar]
-            if total > bot_amount:
-                await self.highrise.chat("Not enough funds")
-                return
-            for bar in tip:
-                await self.highrise.tip_user(room_user.id, bar)
-
-    async def tip_me(self, user: User, message: str) -> None:
-        try:
-            amount_str = message.split(" ")[1]
-            amount = int(amount_str)
-            bars_dictionary = {
-                10000: "gold_bar_10k",
-                5000: "gold_bar_5000",
-                1000: "gold_bar_1k",
-                500: "gold_bar_500",
-                100: "gold_bar_100",
-                50: "gold_bar_50",
-                10: "gold_bar_10",
-                5: "gold_bar_5",
-                1: "gold_bar_1"
-            }
-            fees_dictionary = {
-                10000: 1000,
-                5000: 500,
-                1000: 100,
-                500: 50,
-                100: 10,
-                50: 5,
-                10: 1,
-                5: 1,
-                1: 1
-            }
-
-            bot_wallet = await self.highrise.get_wallet()
-            bot_amount = bot_wallet.content[0].amount
-            if bot_amount < amount:
-                await self.highrise.chat("Not enough funds in the bot's wallet.")
-                return
-
-            tip = []
-            total = 0
-            for bar in sorted(bars_dictionary.keys(), reverse=True):
-                if amount >= bar:
-                    bar_amount = amount // bar
-                    amount %= bar
-                    tip.extend([bars_dictionary[bar]] * bar_amount)
-                    total += bar_amount * bar + fees_dictionary[bar]
-
-            if total > bot_amount:
-                await self.highrise.chat("Not enough funds to tip the specified amount.")
-                return
-
-            for bar in tip:
-                await self.highrise.tip_user(user.id, bar)
-
-            await self.highrise.chat(f"You have been tipped {amount_str}.")
-        except (IndexError, ValueError):
-            await self.highrise.chat("Invalid tip amount. Please specify a valid number.")
+    def is_authorized(self, user: User) -> bool:
+        return user.username in ["RayMG", "sh1n1gam1699"] or user.is_moderator
