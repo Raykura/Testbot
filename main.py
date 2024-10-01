@@ -1,7 +1,5 @@
 import random
-import os
-import importlib.util
-from highrise import*
+from highrise import *
 from highrise import BaseBot, Position
 from highrise.models import SessionMetadata
 
