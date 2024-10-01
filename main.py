@@ -134,7 +134,8 @@ class Bot(BaseBot):
             await self.highrise.chat(f"User with ID '{target_user_id}' not found in the room.")
 
     def is_authorized(self, user: User) -> bool:
-        return user.username in ["RayMG", "sh1n1gam1699"] or user.is_moderator            
+        return user.username in ["RayMG", "sh1n1gam1699"] or user.is_moderator     
+             
         if message.lower().startswith("-tipall ") and user.username == "RayMG":
               parts = message.split(" ")
               if len(parts) != 2:
