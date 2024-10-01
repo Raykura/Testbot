@@ -20,11 +20,23 @@ class Bot(BaseBot):
         # Ensure the message is not empty
         if message:
             # Check if the user is a host or moderator
-            if user.role in ["host", "moderator"]:  # Adjust these roles as per your application's definition
+            if user.role in ["host", "moderator"]:  # Adjust these roles based on your application's definition
                 # Broadcast the message to the public room
                 await self.highrise.send_message(f"{user.username} whispered: {message}")
             else:
                 # Inform the user they do not have permission to whisper to the bot
+                await self.highrise.send_whisper(user.id, "❌ You do not have permission to use this command.")
+
+    async def on_user_message(self, user: User, message: str) -> None:
+        # Check if the message is directed to the bot
+        if message.startswith('@MGBot'):
+            # Extract the actual message following the bot mention
+            actual_message = message[len('@MGBot'):].strip()
+            if user.role in ["host", "moderator"]:  # Adjust these roles as needed
+                # Broadcast the message to the public room
+                await self.highrise.send_message(f"{user.username} said: {actual_message}")
+            else:
+                # Inform the user they do not have permission to send this command
                 await self.highrise.send_whisper(user.id, "❌ You do not have permission to use this command.")
 
 # Ensure the bot is initialized correctly
