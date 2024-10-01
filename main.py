@@ -7,6 +7,17 @@ from highrise.models import SessionMetadata
 
 casa = ["I Marry You 💍","Of course I do 💍❤️","I don't want to 💍💔","Of course I don't 💍💔","I Love You Of course I marry you 💍"]
 
+# List of random flirty messages
+flirty_messages = [
+    "You're amazing! Sending you a heart ❤️",
+    "Just wanted to let you know how wonderful you are! 💖",
+    "You make my day brighter! Here’s a heart for you! 💕",
+    "You have a special place in my heart! ❤️",
+    "Is your name Google? Because you have everything I’m searching for! 💘",
+    "You're like a fine wine; you get better with time! 🍷❤️",
+    "Sending you hearts because you're so lovely! 💗",
+]
+
 class Bot(BaseBot):
     async def on_start(self, session_metadata: SessionMetadata) -> None:
         print("working")
@@ -20,56 +31,43 @@ class Bot(BaseBot):
         await self.highrise.send_emote("dance-hipshake")
         await self.highrise.send_emote("emote-lust", user.id) 
 
+
+# List of random flirty messages
+flirty_messages = [
+    "You're amazing! Sending you a heart ❤️",
+    "Just wanted to let you know how wonderful you are! 💖",
+    "You make my day brighter! Here’s a heart for you! 💕",
+    "You have a special place in my heart! ❤️",
+    "Is your name Google? Because you have everything I’m searching for! 💘",
+    "You're like a fine wine; you get better with time! 🍷❤️",
+    "Sending you hearts because you're so lovely! 💗",
+]
+
+
     async def on_chat(self, user: User, message: str) -> None:
         print(f"{user.username}: {message}")
 
-        # React with heart if message starts with "heart" or "Heart"
-        if message.lower().startswith("heart"):
-            await self.highrise.react("heart", user.id)
+        # Check if the message is in the format heart@<user.id> or Heart@<user.id>
+        if message.lower().startswith("heart@"):
+            target_user_id = message.split('@')[1].strip()
+            await self.send_heart_to_user(user, target_user_id)
 
-        # Handle the !heart command
-        elif message.startswith("!heart"):
-            parts = message.split()
-            if len(parts) == 3 and parts[1].lower() == "all":
-                try:
-                    num_hearts = int(parts[2])
-                    if 1 <= num_hearts <= 20:
-                        await self.send_hearts_to_all(user, num_hearts)
-                    else:
-                        await self.highrise.chat("Please specify a number of hearts between 1 and 20.")
-                except ValueError:
-                    await self.highrise.chat("Invalid number of hearts.")
-            else:
-                await self.highrise.chat("Usage: !heart all <number> (up to 20)")
-
-        # Send a heart to a specific user
-        elif "heart@" in message or "Heart@" in message:
-            target_username = message.split('@')[1].strip()
-            await self.send_heart_to_user(user, target_username)
-
-    async def send_hearts_to_all(self, user: User, num_hearts: int) -> None:
-        room_users = await self.highrise.get_room_users()
-        for room_user, _ in room_users.content:
-            for _ in range(num_hearts):
-                await self.highrise.react("heart", room_user.id)
-        await self.highrise.chat(f"{user.username} sent {num_hearts} hearts to everyone!")
-
-    async def send_heart_to_user(self, sender: User, target_username: str) -> None:
+    async def send_heart_to_user(self, sender: User, target_user_id: str) -> None:
         room_users = await self.highrise.get_room_users()
         target_user = None
 
         # Find the specified user in the room
         for room_user, _ in room_users.content:
-            if room_user.username.lower() == target_username.lower():
+            if str(room_user.id) == target_user_id:
                 target_user = room_user
                 break
 
         if target_user:
-            await self.highrise.react("heart", target_user.id)
-            await self.highrise.chat(f"{sender.username} sent a heart to {target_user.username}!")
+            await self.highrise.react("heart", target_user.id)  # Send the heart reaction
+            flirty_message = random.choice(flirty_messages)
+            await self.highrise.chat(f"{sender.username} sent a heart to {target_user.username}! {flirty_message}")
         else:
-            await self.highrise.chat(f"User '{target_username}' not found in the room.")
-
+            await self.highrise.chat(f"User with ID '{target_user_id}' not found in the room.")
         # Handle wallet command
         if message.lower().startswith("!wallet"):
             await self.display_wallet(user)
