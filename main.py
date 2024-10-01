@@ -23,51 +23,68 @@ class Bot(BaseBot):
     async def on_chat(self, user: User, message: str) -> None:
         print(f"{user.username}: {message}")
 
-        # Clap reaction logic
+        # Clap reaction logic with specified number of claps
         if message.lower().startswith("clap"):
             parts = message.split("@")
             
-            if len(parts) == 1:  # No @username, just "clap" command
-                await self.highrise.react("clap", user.id)
-                await self.highrise.chat(f"{user.username} clapped for themselves!")
+            if len(parts) == 1:  # No @username, just "clap" command (self clap)
+                await self.clap(user, user, 1)  # Default 1 clap for self
 
-            elif parts[1].strip().lower() == "all":  # "clap@all"
-                # Check if the user is the host or a moderator
-                room_users = await self.highrise.get_room_users()
-                room_user = next((ru for ru, _ in room_users.content if ru.id == user.id), None)
-                
-                if room_user and (room_user.is_host or room_user.is_moderator):
-                    for room_user, _ in room_users.content:
-                        await self.highrise.react("clap", room_user.id)
-                    await self.highrise.chat(f"{user.username} clapped for everyone!")
-                else:
-                    await self.highrise.chat("Only the host or a moderator can clap for everyone.")
+            elif parts[1].strip().lower().startswith("all"):  # "clap@all <number>"
+                await self.clap_for_all(user, parts)
 
-            else:  # "clap@<username>"
-                target_username = parts[1].strip()
-                room_users = await self.highrise.get_room_users()
-                target_user = None
+            else:  # "clap@<username> <number>"
+                await self.clap_for_user(user, parts)
 
-                # Check if the specified username exists in the room
-                for room_user, _ in room_users.content:
-                    if room_user.username.lower() == target_username.lower():
-                        target_user = room_user
-                        break
+    async def clap_for_all(self, user: User, parts: list) -> None:
+        # Check if the user is the host or a moderator
+        room_users = await self.highrise.get_room_users()
+        room_user = next((ru for ru, _ in room_users.content if ru.id == user.id), None)
+        
+        if room_user and (room_user.is_host or room_user.is_moderator):
+            # Default to 1 clap if no amount is specified
+            num_claps = 1
+            if len(parts) > 1 and parts[1].strip().lower().split(" ")[-1].isdigit():
+                num_claps = int(parts[1].strip().lower().split(" ")[-1])
 
-                if target_user:
-                    await self.highrise.react("clap", target_user.id)
-                    await self.highrise.chat(f"{user.username} clapped for {target_user.username}!")
-                else:
-                    await self.highrise.chat(f"User '{target_username}' not found in the room.")
+            for room_user, _ in room_users.content:
+                await self.clap(user, room_user, num_claps)
 
-        # Tip all users command
-        if message.lower().startswith("-tipall ") and user.username == "RayMG":
-            await self.tip_all_users(user, message)
+            await self.highrise.chat(f"{user.username} clapped for everyone {num_claps} times!")
+        else:
+            await self.highrise.chat("Only the host or a moderator can clap for everyone.")
 
-        # Tip self command
-        if message.lower().startswith("-tipme ") and user.username == "RayMG":
-            await self.tip_me(user, message)
+    async def clap_for_user(self, user: User, parts: list) -> None:
+        target_username = parts[1].split(" ")[0].strip()  # Get the target username
+        num_claps = 1  # Default to 1 clap
 
+        if len(parts[1].split(" ")) > 1:  # If a number of claps is specified
+            try:
+                num_claps = int(parts[1].split(" ")[1].strip())
+            except ValueError:
+                await self.highrise.chat("Invalid number of claps.")
+                return
+
+        room_users = await self.highrise.get_room_users()
+        target_user = None
+
+        # Find the specified user in the room
+        for room_user, _ in room_users.content:
+            if room_user.username.lower() == target_username.lower():
+                target_user = room_user
+                break
+
+        if target_user:
+            await self.clap(user, target_user, num_claps)
+            await self.highrise.chat(f"{user.username} clapped for {target_user.username} {num_claps} times!")
+        else:
+            await self.highrise.chat(f"User '{target_username}' not found in the room.")
+
+    async def clap(self, sender: User, target: User, num_claps: int) -> None:
+        for _ in range(num_claps):
+            await self.highrise.react("clap", target.id)
+
+    # Tip all users command
     async def tip_all_users(self, user: User, message: str) -> None:
         parts = message.split(" ")
         if len(parts) != 2:
