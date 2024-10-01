@@ -130,44 +130,50 @@ class Bot(BaseBot):
                     await self.highrise.tip_user(user.id, bar)
                 await self.highrise.chat(f"You have been tipped {amount_str}.")
             except (IndexError, ValueError):
-                await self.highrise.chat("Invalid tip amount. Please specify a valid number.")
+                await self.highrise.chat("Invalid tip amount. Please specify a valid 
 
-        # React with clap
-        if message.lower().startswith("clap@") or message.lower().startswith("clap.") and len(message.split()) >= 2:
-            target_user = message.split("@")[1] if "@" in message else message.split(".")[1]
-            clap_amount = int(message.split()[-1]) if message.split()[-1].isdigit() else 1
-            clap_amount = min(clap_amount, 10)
-            for _ in range(clap_amount):
-                await self.highrise.react("clap", target_user)
+        # Clap to specific user or multiple claps to user
+        if message.lower().startswith("clap@") or message.lower().startswith("clap."):
+            parts = message.split("@") if "@" in message else message.split(".")
+            if len(parts) >= 2:
+                target_username = parts[1].split()[0]
+                clap_count = 1  # Default to 1 clap
+                if len(parts[1].split()) > 1 and parts[1].split()[1].isdigit():
+                    clap_count = min(int(parts[1].split()[1]), 10)  # Limit to 10 claps
+                for _ in range(clap_count):
+                    await self.highrise.react("clap", target_username)
 
-        # Clap all users (only host or moderator)
-        if message.startswith("!clapall") or message.startswith("-clapall") and user.is_host_or_moderator:
+        # Clap all users (host or moderator only)
+        if (message.startswith("!clapall") or message.startswith("-clapall")) and user.is_host_or_moderator:
             try:
-                clap_amount = int(message.split()[1])
-                clap_amount = min(clap_amount, 10)
+                clap_count = int(message.split()[1])
+                clap_count = min(clap_count, 10)  # Limit to 10 claps
                 room_users = await self.highrise.get_room_users()
-                for room_user, _ in room_users.content:
-                    for _ in range(clap_amount):
+                for room_user in room_users.content:
+                    for _ in range(clap_count):
                         await self.highrise.react("clap", room_user.id)
             except:
                 await self.highrise.chat("Invalid command format.")
 
-        # React with heart
-        if message.lower().startswith("heart@") or message.lower().startswith("heart.") and len(message.split()) >= 2:
-            target_user = message.split("@")[1] if "@" in message else message.split(".")[1]
-            heart_amount = int(message.split()[-1]) if message.split()[-1].isdigit() else 1
-            heart_amount = min(heart_amount, 10)
-            for _ in range(heart_amount):
-                await self.highrise.react("heart", target_user)
+        # Heart to specific user or multiple hearts to user
+        if message.lower().startswith("heart@") or message.lower().startswith("heart."):
+            parts = message.split("@") if "@" in message else message.split(".")
+            if len(parts) >= 2:
+                target_username = parts[1].split()[0]
+                heart_count = 1  # Default to 1 heart
+                if len(parts[1].split()) > 1 and parts[1].split()[1].isdigit():
+                    heart_count = min(int(parts[1].split()[1]), 10)  # Limit to 10 hearts
+                for _ in range(heart_count):
+                    await self.highrise.react("heart", target_username)
 
-        # Heart all users (only host or moderator)
-        if message.startswith("!heartall") or message.startswith("-heartall") and user.is_host_or_moderator:
+        # Heart all users (host or moderator only)
+        if (message.startswith("!heartall") or message.startswith("-heartall")) and user.is_host_or_moderator:
             try:
-                heart_amount = int(message.split()[1])
-                heart_amount = min(heart_amount, 10)
+                heart_count = int(message.split()[1])
+                heart_count = min(heart_count, 10)  # Limit to 10 hearts
                 room_users = await self.highrise.get_room_users()
-                for room_user, _ in room_users.content:
-                    for _ in range(heart_amount):
+                for room_user in room_users.content:
+                    for _ in range(heart_count):
                         await self.highrise.react("heart", room_user.id)
             except:
                 await self.highrise.chat("Invalid command format.")
