@@ -17,9 +17,14 @@ class Bot(BaseBot):
         await self.highrise.send_emote("emote-lust", user.id) 
 
     async def on_user_whisper(self, user: User, message: str) -> None:
-        # Check if there is a message
-        if message:  
-            # Broadcast the message to the public room
-            await self.highrise.send_message(f"{user.username} whispered: {message}")
+        # Check if the message is not empty
+        if message:
+            # Check if the user is a host or moderator
+            if user.role in ["host", "moderator"]:  # Adjust roles based on your application
+                # Broadcast the message to the public room
+                await self.highrise.send_message(f"{user.username} whispered: {message}")
+            else:
+                # Inform the user they do not have permission
+                await self.highrise.send_whisper(user.id, "❌ You do not have permission to use this command.")
 
 # Make sure to initialize your bot correctly here
